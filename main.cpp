@@ -1,27 +1,47 @@
-#include "Event.h"
-#include "Instruction.h"
-#include "Pan_Tile Device.h"
-#include "Sweep_History.h"
-#include "Sweep_Profile.h"
+//#include "Event.h"
+//#include "Instruction.h"
+#include "PanTiltDevice.h"
+//#include "Sweep_History.h"
+//#include "Sweep_Profile.h"
 #include <iostream>
-#include <string.h>
+#include <vector>
+#include <string>
 #include <limits>
-#include <stdlib.h>
+#include <sstream> 
 
 using namespace std;
 
 // Function Prototypes
-char** processStrToArr(const char *input, int *count);
-bool enter_device_names(char *input);
+bool enter_device_names(const vector<PanTiltDevice>& devices, const vector<string>& names);
+vector<string> processStrToArr(const string& input);
 void task_exit();
-
-const char *DEVICES[] = {"dev1", "dev2", "dev3", "dev4"};
-	int DEVICE_COUNT = sizeof(DEVICES) / sizeof(DEVICES[0]);
 
 int main()
 {
 	int state = 0;
 	int choice = -1;
+	
+	// Hard define devices for sake of demo
+
+	vector<PanTiltDevice> devices =
+	{
+		PanTiltDevice("dev1", "001"),
+		PanTiltDevice("dev2", "002", 5, 5, 10),
+		PanTiltDevice("dev3", "003", 18),
+		PanTiltDevice("dev4", "004", 28, 15, 19)
+	};
+
+	for (const auto& device : devices)
+	{
+		std::cout << "---------------------\n";
+		std::vector<std::string> status = device.getStatus();
+
+		for (const auto& line : status)
+		{
+			std::cout << line << "\n";
+		}
+	}
+	
 	while (true)
 	{
 
@@ -53,23 +73,62 @@ int main()
 		    case 1:
 		    {
 			    cout << "\nSTATUS selected";
-				string devices;
+				string input;
 				bool allValid = false;
+
 				while (!allValid)
 				{
-					cout << "\nEnter device name(s) to see status of, separated by a comma\n";
-					getline(cin >> ws, devices);
-					if(enter_device_names((char*)devices.c_str()))
-					{	
-						cout << "All devices valid";
+					cout << "\nEnter device name(s), separated by commas:\n";
+					getline(cin >> ws, input);
+
+					vector<string> names = processStrToArr(input);
+
+					vector<const PanTiltDevice*> selectedDevices;
+
+					bool allFound = true;
+
+					for (const auto& name : names)
+					{
+						bool found = false;
+
+						for (const auto& dev : devices)
+						{
+							if (name == dev.getName())
+							{
+								selectedDevices.push_back(&dev);
+								found = true;
+								break;
+							}
+						}
+						if (!found)
+						{
+							cout << "Error: '" << name << "' is not valid.\n";
+							allFound = false;
+						}
+					}
+					if (allFound)
+					{
+						cout << "\nStatus of selected devices:\n";
+
+						for (const auto* dev : selectedDevices)
+						{
+							cout << "\n---------------------\n";
+
+							vector<string> status = dev->getStatus();
+							for (const auto& line : status)
+								cout << line << "\n";
+						}
 						allValid = true;
-						break;
 					}
 					else
 					{
 						cout << "Please try again.\n";
+						cout << "Valid devices:\n";
+						for (const auto& dev : devices)
+							cout << "- " << dev.getName() << "\n";
 					}
 				}
+
 			    state = 0;
 				task_exit();
 			    break;
@@ -139,79 +198,54 @@ void task_exit()
 	cout << "\n\nTask Complete, returning to Main Menu. Hit Ctrl + C to exit the program\n";
 }
 
-bool enter_device_names(char *input)
+bool enter_device_names(const vector<PanTiltDevice>& devices, const vector<string>& names)
 {
-	int count = 0;
-	char** deviceNames = processStrToArr(input, &count);
-
-	if (deviceNames == NULL && count == 0)
-	{
-		cout << "No devices entered. Valid devices:\n";
-		for (int i = 0; i < DEVICE_COUNT; i++)
-		{
-			printf("- %s\n", DEVICES[i]);
-		}
-		return false;
-	}
-
 	bool allValid = true;
 
-	for (int i = 0; i < count; i++)
+	for (const auto& name : names)
 	{
-		bool isValid = false;
-		for (int j = 0; j < DEVICE_COUNT; j++)
+		bool found = false;
+
+		for (const auto& dev : devices)
 		{
-			if (strcmp(deviceNames[i], DEVICES[j]) == 0) {
-                isValid = true;
-                break;
-            }
-		}
-		if (!isValid)
-		{
-			allValid = false;
-			printf("Error: '%s' is not a valid device.\n", deviceNames[i]);
-			cout << "Valid devices:\n";
-			for (int i = 0; i < DEVICE_COUNT; i++)
+			if (name == dev.getName())
 			{
-				printf("- %s\n", DEVICES[i]);
+				found = true;
+				break;
 			}
+		}
+
+		if (!found)
+		{
+			cout << "Error: '" << name << "' is not valid.\n";
+			allValid = false;
 		}
 	}
 
-	for (int i = 0; i < count; i++)
-	{
-		free(deviceNames[i]);
-	}
-	free(deviceNames);
 	return allValid;
 }
 
-char** processStrToArr(const char *input, int *count)
+vector<string> processStrToArr(const string& input)
 {
-	extern const char* DEVICES[];
-    extern int DEVICE_COUNT;
-	
-	// processes a list of strings seprated by commas, returns as an array
-	char **result = NULL;
-	char *tmpInput = strdup(input);
-	char *token = strtok(tmpInput, ",");
-	*count = 0;
+	vector<string> result;
+	stringstream ss(input);
+	string token;
 
-	while (token != NULL)
+	while (getline(ss, token, ','))
 	{
-		while (*token == ' ') token++;
-		char **tmpResult = (char**)realloc(result, sizeof(char*) * (*count + 1));
-		if (tmpResult == NULL)
-		{
-			free(tmpInput);
-			return result;
-		}
-		result = tmpResult;
-		result[*count]=(char*)strdup(token);
-		(*count)++;
+		// trim leading spaces
+		size_t start = token.find_first_not_of(" ");
+		if (start != string::npos)
+			token = token.substr(start);
 
-		token = strtok(NULL, ",");
+		// trim trailing spaces
+		size_t end = token.find_last_not_of(" ");
+		if (end != string::npos)
+			token = token.substr(0, end + 1);
+
+		if (!token.empty())
+			result.push_back(token);
 	}
-	free(tmpInput);
+
 	return result;
 }
