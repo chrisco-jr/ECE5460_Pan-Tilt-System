@@ -1,0 +1,31 @@
+# Build outputs
+x64/
+x86/
+Debug/
+Release/
+*.exe
+*.obj
+*.pdb
+*.ilk
+*.log
+
+# Visual Studio folders
+.vs/
+.vscode/
+
+# Build system files
+*.tlog
+*.lastbuildstate
+*.idb
+
+# User-specific files
+*.user
+*.suo
+
+# CMake (if ever used)
+CMakeFiles/
+CMakeCache.txt
+
+# Out directories
+out/
+build/
