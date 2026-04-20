@@ -10,23 +10,34 @@
 //
 
 
-#if !defined(_SWEEP_PROFILE_H)
+#ifndef _SWEEP_PROFILE_H
 #define _SWEEP_PROFILE_H
 
+#include <string>
+#include <vector>
+#include "Instruction.h" // Assuming this defines your Instruction class
 
 class Sweep_Profile {
 public:
-	void setName(int String);
-	String getName();
-	void addInstr(int Instruction);
-	void loadProfile(int List);
-	void saveProfile(int bool);
-	void playProfile(int List);
-	void stopProfile(int List);
-	void deleteProfile(int String);
+    // Constructor
+    Sweep_Profile(std::string name) : profileName(name) {}
+
+    // Getters and Setters
+    void setName(std::string name) { profileName = name; }
+    std::string getName() const { return profileName; }
+
+    // Profile Configuration
+    void addInstr(const Instruction& instr);
+    bool saveProfile(); // Returns true if write to file succeeds
+    static Sweep_Profile loadProfile(std::string filename);
+
+    // Playback control
+    void playProfile();
+    void stopProfile();
+
 private:
-	String profileName;
-	List instrList;
+    std::string profileName;
+    std::vector<Instruction> instrList; // The "List" from your diagram
 };
 
-#endif  //_SWEEP_PROFILE_H
+#endif

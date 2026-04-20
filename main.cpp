@@ -2,7 +2,7 @@
 //#include "Instruction.h"
 #include "PanTiltDevice.h"
 //#include "Sweep_History.h"
-//#include "Sweep_Profile.h"
+#include "Sweep_Profile.h"
 #include <iostream>
 #include <vector>
 #include <string>
@@ -136,6 +136,14 @@ int main()
 		    case 2:
 		    {
 			    cout << "\nCONFIGURE PROFILE selected";
+				cout << "\nCreating new Sweep Profile...";
+				cout << "\nEnter profile name: ";
+				string profileName;
+				cin >> profileName;
+
+				bool moreInstr = true;
+				Sweep_Profile newProfile(profileName);
+
 			    state = 0;
 				task_exit();
 			    break;
