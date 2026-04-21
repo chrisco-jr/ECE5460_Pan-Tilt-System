@@ -15,29 +15,38 @@
 
 #include <string>
 #include <vector>
-#include "Instruction.h" // Assuming this defines your Instruction class
+#include <thread>
+#include <atomic>
+#include "Instruction.h"
+#include "PanTiltDevice.h"
+#include <iostream>
+#include <fstream>
+#include <filesystem>
 
 class Sweep_Profile {
 public:
     // Constructor
-    Sweep_Profile(std::string name) : profileName(name) {}
+    Sweep_Profile(std::string name);
 
     // Getters and Setters
-    void setName(std::string name) { profileName = name; }
-    std::string getName() const { return profileName; }
+    void setName(std::string name);
+    std::string getName() const;
 
     // Profile Configuration
     void addInstr(const Instruction& instr);
-    bool saveProfile(); // Returns true if write to file succeeds
-    static Sweep_Profile loadProfile(std::string filename);
+    void saveProfile(bool save);
+    std::vector<Instruction> loadProfile(std::string filename);
+    void deleteProfile(std::string name);
 
     // Playback control
-    void playProfile();
-    void stopProfile();
+    void playProfile(std::vector<PanTiltDevice>& devices);
+    void stopProfile(std::vector<PanTiltDevice>& devices);
 
 private:
     std::string profileName;
-    std::vector<Instruction> instrList; // The "List" from your diagram
+    std::vector<Instruction> instrList;
+    std::atomic<bool> isRunning{ false };
+    void runBackground(std::vector<PanTiltDevice>* devices);
 };
 
 #endif

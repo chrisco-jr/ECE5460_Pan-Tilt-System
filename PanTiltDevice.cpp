@@ -8,7 +8,7 @@
 //  @ Author : 
 //
 //
-#include "PanTiltDevice.h"   // make sure this matches your actual filename
+#include "PanTiltDevice.h"
 
 // Constructor
 PanTiltDevice::PanTiltDevice(std::string n, std::string i, int pan, int tilt, int spd)
@@ -25,6 +25,9 @@ void PanTiltDevice::setTiltPos(int t) {
 
 void PanTiltDevice::setSpeed(int s) {
     speed = s;
+}
+void PanTiltDevice::setPlaying(bool status) {
+    isPlaying = status;
 }
 
 // Getters
@@ -48,13 +51,61 @@ std::string PanTiltDevice::getID() const {
     return id;
 }
 
+bool PanTiltDevice::isCurrentlyPlaying() const {
+    return isPlaying;
+}
+
 // Status function
 std::vector<std::string> PanTiltDevice::getStatus() const {
+    // 1. Determine Profile Name string
+    std::string profileDisplay = (loadedProfileName.empty()) ? "N/A" : loadedProfileName;
+
+    // 2. Determine Next Instruction string
+    std::string nextInstrDisplay = "N/A";
+    if (!activeInstructions.empty()) {
+        // Assuming your Instruction class has a way to describe itself as a string
+        // If not, you can construct the string manually here
+        nextInstrDisplay = "Pan: " + std::to_string((int)activeInstructions[0].getPan()) +
+            ", Tilt: " + std::to_string((int)activeInstructions[0].getTilt());
+    }
+
+    // 3. Determine Playing Status string
+    std::string statusDisplay = isPlaying ? "Playing" : "Idle";
+
     return {
         "Name: " + name,
         "ID: " + id,
         "Pan: " + std::to_string(panPos),
         "Tilt: " + std::to_string(tiltPos),
-        "Speed: " + std::to_string(speed)
+        "Speed: " + std::to_string(speed),
+        "Loaded Profile: " + profileDisplay,
+        "Next Instruction: " + nextInstrDisplay,
+        "System Status: " + statusDisplay
     };
+}
+
+//Configruation Related
+
+void PanTiltDevice::loadInstructions(std::string pName, const std::vector<Instruction>& instrs) {
+    this->loadedProfileName = pName;
+    this->activeInstructions = instrs; // This copies the vector into the object
+}
+
+// New Setter
+void PanTiltDevice::setLoadedProfile(std::string pName) {
+    this->loadedProfileName = pName;
+}
+
+// New Getter for the first instruction
+Instruction PanTiltDevice::getFirstInstruction() const {
+    if (!activeInstructions.empty()) {
+        return activeInstructions[0];
+    }
+    // Return a default/empty instruction if the list is empty
+    return Instruction(-1, -1, -1, -1);
+}
+
+// Corrected Getter (Ensure the class scope PanTiltDevice:: is present)
+std::string PanTiltDevice::getLoadedProfile() const {
+    return loadedProfileName;
 }

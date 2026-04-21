@@ -12,27 +12,176 @@
 
 #include "Sweep_Profile.h"
 
-void Sweep_Profile::setName(int String) {
+namespace fs = std::filesystem;
+
+// Constructor
+Sweep_Profile::Sweep_Profile(std::string name) : profileName(name) {}
+
+void Sweep_Profile::setName(std::string name) {
+	profileName = name;
 }
 
-String Sweep_Profile::getName() {
+std::string Sweep_Profile::getName() const {
+	return profileName;
 }
 
-void Sweep_Profile::addInstr(int Instruction) {
+void Sweep_Profile::addInstr(const Instruction& instr) {
+	instrList.push_back(instr);
 }
 
-void Sweep_Profile::loadProfile(int List) {
+std::vector<Instruction> Sweep_Profile::loadProfile(std::string profileName) {
+    std::vector<Instruction> tempInstrList;
+    std::string filePath = "Profiles/" + profileName + ".csv";
+
+    std::ifstream inFile(filePath);
+    if (!inFile.is_open()) {
+        std::cerr << "Error: Could not find profile " << filePath << std::endl;
+        return tempInstrList; // Return empty vector
+    }
+
+    std::string line;
+    std::getline(inFile, line); // Skip the header row (Pan,Tilt,Speed,Delay)
+
+    while (std::getline(inFile, line)) {
+        std::stringstream ss(line);
+        std::string value;
+        std::vector<float> rowData;
+
+        // Split by comma
+        while (std::getline(ss, value, ',')) {
+            rowData.push_back(std::stof(value));
+        }
+
+        // Create Instruction and add to temp list
+        // Assuming Instruction constructor: Instruction(pan, tilt, speed, delay)
+        if (rowData.size() >= 4) {
+            tempInstrList.push_back(Instruction(rowData[0], rowData[1], rowData[2], (int)rowData[3]));
+        }
+    }
+
+    inFile.close();
+    return tempInstrList;
 }
 
-void Sweep_Profile::saveProfile(int bool) {
+void Sweep_Profile::saveProfile(bool save) {
+	if (save)
+	{
+        std::string folderName = "Profiles";
+        try {
+            if (!fs::exists(folderName)) {
+                fs::create_directory(folderName);
+            }
+        }
+        catch (const fs::filesystem_error& e) {
+            std::cerr << "Error creating directory: " << e.what() << "\n";
+            return;
+        }
+        // 2. Create the full path (e.g., "Profiles/MorningScan.csv")
+        std::string filePath = folderName + "/" + profileName + ".csv";
+
+        std::ofstream outFile(filePath);
+
+        if (!outFile.is_open()) {
+            std::cerr << "Failed to create file: " << filePath << "\n";
+            return;
+        }
+
+        // 3. Write CSV Header
+        outFile << "Pan,Tilt,Speed,HoldTime\n";
+
+        // 4. Iterate through instructions and write data
+        for (const auto& instr : instrList) {
+            // Assuming Instruction has getter methods
+            outFile << instr.getPan() << ","
+                << instr.getTilt() << ","
+                << instr.getSpeed() << ","
+                << instr.getDelay() << "\n";
+        }
+
+        outFile.close();
+        std::cout << "Profile saved successfully to " << filePath << "\n";
+	}
+
 }
 
-void Sweep_Profile::playProfile(int List) {
+void Sweep_Profile::playProfile(std::vector<PanTiltDevice>& devices) {
+    // 1. Safety Check: Is any device already busy?
+    for (const auto& dev : devices) {
+        if (dev.isCurrentlyPlaying()) {
+            std::cout << "\n[!] CANNOT PLAY: Device '" << dev.getName()
+                << "' is already running a profile.\n";
+            return; // Exit immediately; do not start the thread
+        }
+    }
+
+    // 2. Preparation: Set the running flags
+    isRunning = true;
+    for (auto& dev : devices) {
+        dev.setPlaying(true);
+    }
+
+    // 3. Launching: Start the worker thread
+    // We pass 'this' to access our instructions and '&devices' to update them
+    std::thread worker(&Sweep_Profile::runBackground, this, &devices);
+
+    // Detach lets the thread live on its own so the menu doesn't freeze
+    worker.detach();
+
+    std::cout << "\n[SYSTEM] Profile '" << profileName << "' started in background.\n";
 }
 
-void Sweep_Profile::stopProfile(int List) {
+void Sweep_Profile::runBackground(std::vector<PanTiltDevice>* devices) {
+    // This loop runs in its own separate space in the CPU
+    for (const auto& instr : instrList) {
+        // If the user calls stopProfile(), isRunning becomes false and we quit
+        if (!isRunning) break;
+
+        // Update every device assigned to this profile
+        for (auto& dev : *devices) {
+            dev.setPanPos((int)instr.getPan());
+            dev.setTiltPos((int)instr.getTilt());
+            dev.setSpeed((int)instr.getSpeed());
+        }
+
+        // Wait for the specific duration (this is what blocks the thread)
+        std::this_thread::sleep_for(std::chrono::milliseconds(instr.getDelay()));
+    }
+
+    // 4. Cleanup: When the loop finishes, reset the flags
+    isRunning = false;
+    for (auto& dev : *devices) {
+        dev.setPlaying(false);
+    }
+    std::cout << "\n[NOTIFY] Profile '" << profileName << "' has finished execution.\n";
 }
 
-void Sweep_Profile::deleteProfile(int String) {
+// THE KILL-SWITCH: Forces the worker thread to stop at the next step
+void Sweep_Profile::stopProfile(std::vector<PanTiltDevice>& devices) {
+    isRunning = false; // The 'if (!isRunning) break;' in the worker catches this
+    for (auto& dev : devices) {
+        dev.setPlaying(false);
+    }
+    std::cout << "[SYSTEM] Stop signal sent to background thread.\n";
 }
 
+void Sweep_Profile::deleteProfile(std::string name) {
+    // Construct the path
+    std::string filePath = "Profiles/" + name + ".csv";
+
+    try {
+        if (fs::exists(filePath)) {
+            if (fs::remove(filePath)) {
+                std::cout << "[SUCCESS] Profile '" << name << "' has been deleted.\n";
+            }
+            else {
+                std::cout << "[ERROR] Could not delete the file. It might be in use.\n";
+            }
+        }
+        else {
+            std::cout << "[ERROR] Profile '" << name << "' does not exist on disk.\n";
+        }
+    }
+    catch (const fs::filesystem_error& e) {
+        std::cerr << "[SYSTEM ERROR] " << e.what() << "\n";
+    }
+}

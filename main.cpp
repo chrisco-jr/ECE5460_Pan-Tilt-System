@@ -135,18 +135,78 @@ int main()
 		    }
 		    case 2:
 		    {
-			    cout << "\nCONFIGURE PROFILE selected";
-				cout << "\nCreating new Sweep Profile...";
-				cout << "\nEnter profile name: ";
-				string profileName;
-				cin >> profileName;
+				string pName;
+				bool validName = false;
+				
+				cout << "\nCONFIGURE PROFILE selected";
+				while (!validName) {
+					cout << "\nEnter name for new profile: ";
+					cin >> pName;
 
-				bool moreInstr = true;
-				Sweep_Profile newProfile(profileName);
+					string filePath = "Profiles/" + pName + ".csv";
+					if (std::filesystem::exists(filePath)) {
+						cout << "[!] Profile '" << pName << "' already exists. Choose a different name.\n";
+					}
+					else {
+						validName = true;
+					}
+				}
 
-			    state = 0;
+				Sweep_Profile newProfile(pName);
+
+				// Temporary storage for the session
+				vector<Instruction> tempSessionInstr;
+				bool addInstr = true;
+
+				while (addInstr) {
+					int p, t, s, d;
+					cout << "\n--- Adding Instruction (OOB numbers rounded to nearest boundary case) ---" << endl;
+					cout << "Enter Pan (-1800 to 1800): "; cin >> p;
+					cout << "Enter Tilt (-300 to 600):  "; cin >> t;
+					cout << "Enter Speed: (1-10)        "; cin >> s;
+					cout << "Enter Delay (ms, >0):      "; cin >> d;
+
+					tempSessionInstr.push_back(Instruction(p, t, s, d));
+
+					char choice;
+					cout << "Enter another instruction? (y/n): ";
+					cin >> choice;
+					if (tolower(choice) != 'y') addInstr = false;
+				}
+
+				// 3. Review Instructions
+				cout << "\n--- REVIEW PROFILE: " << pName << " ---" << endl;
+				cout << "Step | Pan    | Tilt   | Speed | Delay" << endl;
+				cout << "---------------------------------------" << endl;
+
+				for (size_t i = 0; i < tempSessionInstr.size(); ++i) {
+					printf(" %2zu  | %5d  | %5d  | %5d | %5d\n",
+						i + 1,
+						tempSessionInstr[i].getPan(),
+						tempSessionInstr[i].getTilt(),
+						tempSessionInstr[i].getSpeed(),
+						tempSessionInstr[i].getDelay());
+				}
+
+				// 4. Confirm saving of profile
+				char saveChoice;
+				cout << "\nSave this profile? (y/n): ";
+				cin >> saveChoice;
+
+				if (tolower(saveChoice) == 'y') {
+					Sweep_Profile newProfile(pName);
+					for (const auto& instr : tempSessionInstr) {
+						newProfile.addInstr(instr);
+					}
+					newProfile.saveProfile(true);
+				}
+				else {
+					cout << "Configuration cancelled. Profile not saved." << endl;
+				}
+
+				state = 0;
 				task_exit();
-			    break;
+				break;
 		    }
 		    case 3:
 		    {

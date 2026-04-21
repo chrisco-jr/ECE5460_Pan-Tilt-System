@@ -12,24 +12,42 @@
 
 #include "Instruction.h"
 
-void Instruction::setPanPos(int int) {
+// Constructor implementation
+Instruction::Instruction(int p, int t, int s, int d) {
+    setPanPos(p);
+    setTiltPos(t);
+    setSpeed(s);
+    setTimeDelay(d);
 }
 
-void Instruction::setTiltPos(int int) {
+// Setters
+void Instruction::setPanPos(int p) {
+    panPos = std::clamp(p, PAN_MIN, PAN_MAX);
 }
 
-void Instruction::setSpeed(int int) {
+void Instruction::setTiltPos(int t) {
+    tiltPos = std::clamp(t, TILT_MIN, TILT_MAX);
 }
 
-void Instruction::setTimeDelay(int int) {
+void Instruction::setSpeed(int s) {
+    speed = std::clamp(s, SPEED_MIN, SPEED_MAX);
 }
 
-List Instruction::readInstr() {
+void Instruction::setTimeDelay(int d) {
+    timeDelay = std::max(DELAY_MIN, d);
 }
 
-void Instruction::createInstr() {
+// Getters
+int Instruction::getPan() const { 
+    return panPos; 
 }
-
-void Instruction::deleteInstr() {
+int Instruction::getTilt() const { 
+    return tiltPos; 
+}
+int Instruction::getSpeed() const { 
+    return speed; 
+}
+int Instruction::getDelay() const {
+    return timeDelay; 
 }
 

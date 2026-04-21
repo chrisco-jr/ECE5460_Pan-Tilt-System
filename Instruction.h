@@ -8,26 +8,43 @@
 //  @ Author : 
 //
 //
-
-
-#if !defined(_INSTRUCTION_H)
+#ifndef _INSTRUCTION_H
 #define _INSTRUCTION_H
 
+#include <vector>
+#include <string>
+#include <algorithm>
 
 class Instruction {
+
 public:
-	void setPanPos(int int);
-	void setTiltPos(int int);
-	void setSpeed(int int);
-	void setTimeDelay(int int);
-	List readInstr();
-	void createInstr();
-	void deleteInstr();
+    // Constructor for easy instantiation
+    Instruction(int p, int t, int s, int d);
+
+    // Setters
+    void setPanPos(int p);
+    void setTiltPos(int t);
+    void setSpeed(int s);
+    void setTimeDelay(int d);
+
+    // Getters (Required for Sweep_Profile to save/execute)
+    int getPan() const;
+    int getTilt() const;
+    int getSpeed() const;
+    int getDelay() const;
+
 private:
-	int panPos;
-	int tiltPos;
-	int speed;
-	int timeDelay;
+    int panPos;
+    int tiltPos;
+    int speed;
+    int timeDelay;
+    static const int PAN_MIN = -1800;
+    static const int PAN_MAX = 1800;
+    static const int TILT_MIN = -300;
+    static const int TILT_MAX = 600;
+    static const int SPEED_MIN = 1;
+    static const int SPEED_MAX = 10;
+    static const int DELAY_MIN = 1;
 };
 
-#endif  //_INSTRUCTION_H
+#endif

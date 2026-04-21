@@ -15,6 +15,7 @@
 
 #include <string>
 #include <vector>
+#include "Instruction.h"
 
 class PanTiltDevice {
 public:
@@ -22,11 +23,15 @@ public:
     void setPanPos(int p);
     void setTiltPos(int t);
     void setSpeed(int s);
+    void setPlaying(bool status);
+    void setLoadedProfile(std::string pName);
 
 	// Getters
     int getPanPos() const;
     int getTiltPos() const;
     int getSpeed() const;
+    bool isCurrentlyPlaying() const;
+    std::string getLoadedProfile() const;
 
 	std::string getName() const;
     std::string getID() const;
@@ -36,12 +41,19 @@ public:
 	// Constructor to define object in main
 	PanTiltDevice(std::string n, std::string i, int pan = 0, int tilt = 0, int speed = 0);
 
+    // Configuration
+    void loadInstructions(std::string pName, const std::vector<Instruction>& instrs);
+    Instruction getFirstInstruction() const;
+
 private:
     int panPos;
     int tiltPos;
     int speed;
     std::string name;
     std::string id;
+    bool isPlaying = false;
+    std::string loadedProfileName = "None";
+    std::vector<Instruction> activeInstructions;
 };
 
 #endif  //PANTILTDEVICE_H
