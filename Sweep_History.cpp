@@ -11,19 +11,48 @@
 
 
 #include "Sweep_History.h"
+#include <filesystem>
 
-void Sweep_History::setName(int String) {
+namespace fs = std::filesystem;
+
+Sweep_History::Sweep_History(std::string name) : logName(name) {
+    if (!fs::exists("Logs")) {
+        fs::create_directory("Logs");
+    }
+
+    std::string filePath = "Logs/" + logName + ".csv";
+
+    // Check if it's a new file to write headers
+    std::ifstream checkFile(filePath);
+    bool isNew = !checkFile.good();
+    checkFile.close();
+
+    outFile.open(filePath, std::ios::app);
+
+    if (isNew && outFile.is_open()) {
+        outFile << "Timestamp,DeviceName,DeviceID,Pan,Tilt,Speed\n";
+    }
 }
 
-String Sweep_History::getName() {
+Sweep_History::~Sweep_History() {
+    if (outFile.is_open()) {
+        outFile.close();
+    }
 }
 
-void Sweep_History::addEvent(int List) {
+void Sweep_History::addEvent(const Event& ev) {
+    std::lock_guard<std::mutex> lock(logMutex);
+
+    if (outFile.is_open()) {
+        outFile << ev.getTimestamp() << "," // Now outputs "04/21/2026 18:24:09:452"
+            << ev.getDeviceName() << ","
+            << ev.getDeviceID() << ","
+            << ev.getPanPos() << ","
+            << ev.getTiltPos() << ","
+            << ev.getSpeed() << "\n";
+        outFile.flush();
+    }
 }
 
-List Sweep_History::getEventList() {
-}
-
-void Sweep_History::deleteHistory() {
-}
+std::string Sweep_History::getName() const { return logName; }
 

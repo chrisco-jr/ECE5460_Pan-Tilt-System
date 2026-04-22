@@ -16,6 +16,7 @@
 #include <string>
 #include <vector>
 #include "Instruction.h"
+#include <atomic>
 
 class PanTiltDevice {
 public:
@@ -44,6 +45,11 @@ public:
     // Configuration
     void loadInstructions(std::string pName, const std::vector<Instruction>& instrs);
     Instruction getFirstInstruction() const;
+    const std::vector<Instruction>& getActiveInstructions() const;
+
+    // Stops
+    void requestStop(bool status);
+    bool isStopRequested() const;
 
 private:
     int panPos;
@@ -55,7 +61,7 @@ private:
     std::string loadedProfileName = "None";
     std::vector<Instruction> activeInstructions;
 
-    bool isMoving = false;
+    std::atomic<bool> stopRequested{ false };
 };
 
 #endif  //PANTILTDEVICE_H

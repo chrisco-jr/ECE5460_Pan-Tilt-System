@@ -11,31 +11,55 @@
 
 
 #include "Event.h"
+#include <chrono>
+#include <iomanip>
+#include <sstream>
+#include <ctime>
 
-void Event::setDeviceName(int String) {
+Event::Event(std::string name, std::string id, int pan, int tilt, int spd)
+    : deviceName(name), deviceID(id), panPos(pan), tiltPos(tilt), speed(spd) {
+
+    // 1. Get current system time
+    auto now = std::chrono::system_clock::now();
+    std::time_t now_c = std::chrono::system_clock::to_time_t(now);
+
+    std::tm bt;
+    // Thread-safe local time conversion
+#ifdef _WIN32
+    localtime_s(&bt, &now_c);
+#else
+    localtime_r(&now_c, &bt);
+#endif
+
+    // 2. Format the string: MM/DD/YYYY HH:MM:SS
+    std::ostringstream oss;
+    oss << std::setfill('0')
+        << std::setw(2) << (bt.tm_mon + 1) << "/"
+        << std::setw(2) << bt.tm_mday << "/"
+        << (bt.tm_year + 1900) << " "
+        << std::setw(2) << bt.tm_hour << ":"
+        << std::setw(2) << bt.tm_min << ":"
+        << std::setw(2) << bt.tm_sec;
+
+    timestamp = oss.str();
 }
 
-void Event::setDeviceID(int String) {
+std::string Event::getDeviceName() const { 
+    return deviceName; 
 }
-
-void Event::setPanPos(int int) {
+std::string Event::getDeviceID()   const { 
+    return deviceID; 
 }
-
-void Event::setTiltPos(int int) {
+int Event::getPanPos()             const {
+    return panPos; 
 }
-
-void Event::setSpeed(int int) {
+int Event::getTiltPos()            const { 
+    return tiltPos; 
 }
-
-void Event::setTimestamp(int time) {
+int Event::getSpeed()              const { 
+    return speed; 
 }
-
-List Event::getEventData() {
-}
-
-void Event::deleteEvent() {
-}
-
-void Event::createEvent() {
+std::string Event::getTimestamp()  const { 
+    return timestamp; 
 }
 

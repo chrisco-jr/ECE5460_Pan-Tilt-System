@@ -107,7 +107,18 @@ Instruction PanTiltDevice::getFirstInstruction() const {
     return Instruction(-1, -1, -1, -1);
 }
 
-// Corrected Getter (Ensure the class scope PanTiltDevice:: is present)
 std::string PanTiltDevice::getLoadedProfile() const {
     return loadedProfileName;
+}
+
+const std::vector<Instruction>& PanTiltDevice::getActiveInstructions() const {
+    return activeInstructions;
+}
+
+void PanTiltDevice::requestStop(bool status){
+    stopRequested = status;
+}
+
+bool PanTiltDevice::isStopRequested() const {
+    return stopRequested;
 }

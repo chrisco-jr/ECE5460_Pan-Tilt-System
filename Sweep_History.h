@@ -10,20 +10,26 @@
 //
 
 
-#if !defined(_SWEEP_HISTORY_H)
-#define _SWEEP_HISTORY_H
+#ifndef SWEEP_HISTORY_H
+#define SWEEP_HISTORY_H
 
+#include "Event.h"
+#include <string>
+#include <fstream>
+#include <mutex>
 
 class Sweep_History {
 public:
-	void setName(int String);
-	String getName();
-	void addEvent(int List);
-	List getEventList();
-	void deleteHistory();
+    Sweep_History(std::string name);
+    ~Sweep_History();
+
+    void addEvent(const Event& ev);
+    std::string getName() const;
+
 private:
-	String logName;
-	List eventList;
+    std::string logName;
+    std::ofstream outFile;
+    std::mutex logMutex; // Prevents garbled text from concurrent threads
 };
 
-#endif  //_SWEEP_HISTORY_H
+#endif

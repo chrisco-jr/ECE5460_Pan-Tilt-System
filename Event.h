@@ -10,28 +10,32 @@
 //
 
 
-#if !defined(_EVENT_H)
-#define _EVENT_H
+#ifndef EVENT_H
+#define EVENT_H
 
+#include <string>
+#include <ctime>
 
 class Event {
 public:
-	void setDeviceName(int String);
-	void setDeviceID(int String);
-	void setPanPos(int int);
-	void setTiltPos(int int);
-	void setSpeed(int int);
-	void setTimestamp(int time);
-	List getEventData();
-	void deleteEvent();
-	void createEvent();
+    // Constructor handles timestamping automatically
+    Event(std::string name, std::string id, int pan, int tilt, int spd);
+
+    // Getters for CSV writing
+    std::string getDeviceName() const;
+    std::string getDeviceID()   const;
+    int getPanPos()             const;
+    int getTiltPos()            const;
+    int getSpeed()              const;
+    std::string getTimestamp()  const;
+
 private:
-	String deviceName;
-	String deviceID;
-	int panPos;
-	int tiltPos;
-	int speed;
-	Time timestamp;
+    std::string deviceName;
+    std::string deviceID;
+    int panPos;
+    int tiltPos;
+    int speed;
+    std::string timestamp;
 };
 
-#endif  //_EVENT_H
+#endif
