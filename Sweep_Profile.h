@@ -37,6 +37,7 @@ public:
     void saveProfile(bool save);
     std::vector<Instruction> loadProfile(std::string filename);
     void deleteProfile(std::string name);
+    void clearInstrList() { instrList.clear(); }
 
     // Playback control
     void playProfile(std::vector<PanTiltDevice>& devices);

@@ -66,7 +66,9 @@ std::vector<std::string> PanTiltDevice::getStatus() const {
         // Assuming your Instruction class has a way to describe itself as a string
         // If not, you can construct the string manually here
         nextInstrDisplay = "Pan: " + std::to_string((int)activeInstructions[0].getPan()) +
-            ", Tilt: " + std::to_string((int)activeInstructions[0].getTilt());
+            ", Tilt: " + std::to_string((int)activeInstructions[0].getTilt()) +
+            ", Speed: " + std::to_string((int)activeInstructions[0].getSpeed()) +
+            ", Delay: " + std::to_string((int)activeInstructions[0].getDelay());
     }
 
     // 3. Determine Playing Status string

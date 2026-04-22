@@ -54,6 +54,8 @@ private:
     bool isPlaying = false;
     std::string loadedProfileName = "None";
     std::vector<Instruction> activeInstructions;
+
+    bool isMoving = false;
 };
 
 #endif  //PANTILTDEVICE_H

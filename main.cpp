@@ -8,6 +8,8 @@
 #include <string>
 #include <limits>
 #include <sstream> 
+#include <filesystem>
+namespace fs = std::filesystem;
 
 using namespace std;
 
@@ -15,21 +17,29 @@ using namespace std;
 bool enter_device_names(const vector<PanTiltDevice>& devices, const vector<string>& names);
 vector<string> processStrToArr(const string& input);
 void task_exit();
+std::vector<std::string> getAvailableProfiles();
+void printValidDevices();
+
+// Global Variables
+Sweep_Profile currentProfile("None");
+std::vector<PanTiltDevice*> activeDevices;
+
+// Hard define devices for sake of demo
+
+vector<PanTiltDevice> devices =
+{
+	PanTiltDevice("dev1", "001"),
+	PanTiltDevice("dev2", "002", 5, 5, 10),
+	PanTiltDevice("dev3", "003", 18),
+	PanTiltDevice("dev4", "004", 28, 15, 19)
+};
+
 
 int main()
 {
 	int state = 0;
 	int choice = -1;
 	
-	// Hard define devices for sake of demo
-
-	vector<PanTiltDevice> devices =
-	{
-		PanTiltDevice("dev1", "001"),
-		PanTiltDevice("dev2", "002", 5, 5, 10),
-		PanTiltDevice("dev3", "003", 18),
-		PanTiltDevice("dev4", "004", 28, 15, 19)
-	};
 
 	for (const auto& device : devices)
 	{
@@ -72,12 +82,13 @@ int main()
     		}
 		    case 1:
 		    {
-			    cout << "\nSTATUS selected";
+			    cout << "\nSTATUS selected\n";
 				string input;
 				bool allValid = false;
 
 				while (!allValid)
 				{
+					printValidDevices();
 					cout << "\nEnter device name(s), separated by commas:\n";
 					getline(cin >> ws, input);
 
@@ -123,9 +134,7 @@ int main()
 					else
 					{
 						cout << "Please try again.\n";
-						cout << "Valid devices:\n";
-						for (const auto& dev : devices)
-							cout << "- " << dev.getName() << "\n";
+						printValidDevices();
 					}
 				}
 
@@ -201,27 +210,172 @@ int main()
 					newProfile.saveProfile(true);
 				}
 				else {
-					cout << "Configuration cancelled. Profile not saved." << endl;
+					cout << "Configuration cancelled. Profile not saved.\n";
 				}
 
 				state = 0;
 				task_exit();
 				break;
 		    }
-		    case 3:
-		    {
-			    cout << "\nLOAD PROFILE selected";
-			    state = 0;
+			case 3: // LOAD PROFILE
+			{
+				cout << "\nLOAD PROFILE selected\n";
+
+				// 1. Display Available Files
+				std::vector<std::string> profileNames = getAvailableProfiles();
+				if (profileNames.empty()) {
+					cout << "[!] No profiles found in the 'Profiles' folder.\n";
+					state = 0; break;
+				}
+
+				cout << "\n--- Available Profiles ---" << endl;
+				for (size_t i = 0; i < profileNames.size(); ++i) {
+					cout << i + 1 << ". " << profileNames[i] << endl;
+				}
+
+				// 2. Prompt for Selection
+				int choice;
+				cout << "\nSelect a profile number to load (or 0 to cancel): ";
+				cin >> choice;
+
+				if (choice <= 0 || choice > (int)profileNames.size()) {
+					cout << "Selection cancelled.\n";
+					state = 0;
+					break;
+				}
+
+				string selectedName = profileNames[choice - 1];
+
+				// --- MISSING STEP: Load the data from the file first! ---
+				// This defines loadedSteps so the compiler knows what it is.
+				vector<Instruction> loadedSteps = currentProfile.loadProfile(selectedName);
+
+				if (loadedSteps.empty()) {
+					cout << "[!] Error: Profile file '" << selectedName << "' was empty or could not be read.\n";
+					state = 0;
+					break;
+				}
+
+				cout << "\n--- PREVIEWING PROFILE: " << selectedName << " ---" << endl;
+				cout << "Step | Pan    | Tilt   | Speed | Delay" << endl;
+				cout << "---------------------------------------" << endl;
+
+				for (size_t i = 0; i < loadedSteps.size(); ++i) {
+					// Formatted output to keep columns aligned
+					printf(" %2zu  | %5d  | %5d  | %5d | %5d\n",
+						i + 1,
+						loadedSteps[i].getPan(),
+						loadedSteps[i].getTilt(),
+						loadedSteps[i].getSpeed(),
+						loadedSteps[i].getDelay());
+				}
+
+				char confirm;
+				cout << "\nLoad these instructions onto devices? (y/n): ";
+				cin >> confirm;
+
+				if (tolower(confirm) != 'y') {
+					cout << "Load cancelled by user." << endl;
+					state = 0; break;
+				}
+
+				// 3. Select Target Devices
+				printValidDevices();
+				cout << "\nEnter device name(s) to apply this profile to, separated by commas:\n";
+				string input;
+				getline(cin >> ws, input);
+				vector<string> names = processStrToArr(input);
+
+				int count = 0;
+				for (const string& name : names) {
+					for (auto& dev : devices) {
+						if (dev.getName() == name) {
+							// Now loadedSteps is defined and contains the CSV data
+							dev.loadInstructions(selectedName, loadedSteps);
+							dev.setPlaying(false); // Staged, but not yet playing
+							count++;
+						}
+					}
+				}
+
+				if (count == 0) {
+					cout << "[!] No matching devices found." << endl;
+				}
+				else {
+					cout << "[SUCCESS] Profile '" << selectedName
+						<< "' staged on " << count << " device(s). Ready to Play." << endl;
+				}
+
+				state = 0;
 				task_exit();
-			    break;
-		    }
+				break;
+			}
 		    case 4:
-		    {
-			    cout << "\nDELETE PROFILE selected";
-			    state = 0;
+			{
+				cout << "\nDELETE PROFILE selected" << endl;
+
+				std::vector<std::string> profileNames = getAvailableProfiles();
+				if (profileNames.empty()) {
+					cout << "[!] No profiles found to delete." << endl;
+					state = 0; break;
+				}
+
+				cout << "\n--- Select Profile to DELETE ---" << endl;
+				for (size_t i = 0; i < profileNames.size(); ++i) {
+					cout << i + 1 << ". " << profileNames[i] << endl;
+				}
+
+				int choice; 
+				cout << "\nSelect a profile number (or 0 to cancel): ";
+				cin >> choice;
+
+				if (choice <= 0 || choice > (int)profileNames.size()) {
+					cout << "Action cancelled." << endl;
+					state = 0; break;
+				}
+
+				string selectedName = profileNames[choice - 1]; 
+				// Preview before deletion
+				vector<Instruction> loadedSteps = currentProfile.loadProfile(selectedName);
+
+				cout << "\n--- REVIEWING CONTENTS OF: " << selectedName << " ---" << endl;
+				if (!loadedSteps.empty()) {
+					cout << "Step | Pan    | Tilt   | Speed | Delay" << endl;
+					cout << "---------------------------------------" << endl;
+					for (size_t i = 0; i < loadedSteps.size(); ++i) {
+						printf(" %2zu  | %5d  | %5d  | %5d | %5d\n",
+							i + 1,
+							loadedSteps[i].getPan(),
+							loadedSteps[i].getTilt(),
+							loadedSteps[i].getSpeed(),
+							loadedSteps[i].getDelay());
+					}
+				}
+
+				char confirm;
+				cout << "\n[WARNING] PERMANENTLY delete '" << selectedName << "'? (y/n): ";
+				cin >> confirm;
+
+				if (tolower(confirm) == 'y') {
+					string filePath = "Profiles/" + selectedName + ".csv";
+					if (fs::remove(filePath)) {
+						cout << "[SUCCESS] Profile deleted." << endl;
+
+						for (auto& dev : devices) {
+							if (dev.getLoadedProfile() == selectedName) {
+								dev.setLoadedProfile("None");
+							}
+						}
+					}
+					else {
+						cout << "[ERROR] File not found." << endl;
+					}
+				}
+
+				state = 0;
 				task_exit();
-			    break;
-		    }
+				break;
+			}
 		    case 5:
 		    {
 			    cout << "\nPLAY PROFILE selected";
@@ -317,3 +471,26 @@ vector<string> processStrToArr(const string& input)
 
 	return result;
 }
+
+//Need Function to scan for available profiles
+std::vector<std::string> getAvailableProfiles() {
+	std::vector<std::string> profiles;
+	std::string path = "Profiles";
+
+	if (!fs::exists(path)) return profiles;
+
+	for (const auto& entry : fs::directory_iterator(path)) {
+		if (entry.path().extension() == ".csv") {
+			// Get just the filename without the .csv extension
+			profiles.push_back(entry.path().stem().string());
+		}
+	}
+	return profiles;
+}
+
+void printValidDevices() {
+	cout << "Valid devices:\n";
+	for (const auto& dev : devices)
+		cout << "- " << dev.getName() << "\n";
+}
+
